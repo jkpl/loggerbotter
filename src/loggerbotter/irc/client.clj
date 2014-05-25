@@ -10,16 +10,15 @@
                  :frame (string :utf-8 :delimiters ["\r\n"])})))
 
 (defn connect-to-irc
-  [out-ch & {:keys [host port nick realname channels]}]
-  (let [ch (tcp-line-client host port)
-        messages (map* irc/parse ch)
-        pings (filter* irc/ping? messages)]
-    (on-closed ch #(enqueue out-ch :closed))
-    (siphon messages out-ch)
-    (enqueue ch (irc/user nick realname))
-    (enqueue ch (irc/nick nick))
+  [& {:keys [host port nick realname channels]}]
+  (let [in-ch (tcp-line-client host port)
+        out-ch (channel)]
+    (siphon (map* irc/parse in-ch) out-ch)
+    (on-closed in-ch #(enqueue out-ch :closed))
+    (enqueue in-ch (irc/user nick realname))
+    (enqueue in-ch (irc/nick nick))
     (doseq [channel channels]
-      (enqueue ch (irc/join channel)))
-    (receive-all pings
-                 #(enqueue ch (irc/ping->pong %)))
-    ch))
+      (enqueue in-ch (irc/join channel)))
+    (receive-all (filter* irc/ping? out-ch)
+                 #(enqueue in-ch (irc/ping->pong %)))
+    [in-ch out-ch]))
