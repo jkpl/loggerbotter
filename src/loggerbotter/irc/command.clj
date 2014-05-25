@@ -68,3 +68,6 @@
 
 (defn ping? [message]
   (= "PING" (:command message)))
+
+(defn ping->pong [message]
+  (pong (:body message)))
