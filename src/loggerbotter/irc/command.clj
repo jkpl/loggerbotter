@@ -46,24 +46,25 @@
          (into {}))
     name))
 
-(defn- parse-targeted [name message]
+(defn- parse-command [message]
   (let [[command others] (string/split message #" " 2)
         [params-s body] (string/split others #":" 2)
         params (->> (string/split params-s #" ")
                     (filter (complement string/blank?))
-                    (vec))]
-    {:name (parse-name name)
-     :command command
+                    vec)]
+    {:command command
      :parameters params
      :body body}))
 
-(defn- parse-untargeted [command message]
-  {:command command
-   :body (second (string/split message #":" 2))})
+(defn- name? [s]
+  (= \: (first s)))
 
 (defn parse [message]
   (let [[part1 others] (string/split message #" " 2)]
-    (if (= \: (first part1))
-      (parse-targeted (.substring part1 1) others)
-      (parse-untargeted part1 others))))
+    (if (name? part1)
+      (assoc (parse-command others)
+        :name (parse-name (.substring part1 1)))
+      (parse-command message))))
 
+(defn ping? [message]
+  (= "PING" (:command message)))

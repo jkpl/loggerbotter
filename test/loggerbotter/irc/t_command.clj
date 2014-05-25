@@ -35,7 +35,10 @@
               :parameters ["param1" "param2"]
               :body "message :body"}
        (irc/parse "command :body")
-           => {:command "command" :body "body"}
+           => {:command "command" :body "body" :parameters []}
        (irc/parse ":foo!bar@server param :body")
            => {:name {:nick "foo" :username "bar" :host "server"}
-               :command "param" :body "body" :parameters []})
+               :command "param" :body "body" :parameters []}
+       (irc/parse "cmd param1 param2 :body")
+           => {:command "cmd" :body "body"
+               :parameters ["param1" "param2"]})
