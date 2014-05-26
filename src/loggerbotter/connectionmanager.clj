@@ -1,6 +1,17 @@
 (ns loggerbotter.connectionmanager
-  (:require [lamina.core :refer :all]
-            [loggerbotter.irc.client :as irc]))
+  (:require [lamina.core :as l]
+            [loggerbotter.util :as util]))
+
+(defrecord ConnectionManager
+           [conf connections connection-factory out-ch close-ch])
+
+(defn new-manager [conf connection-factory]
+  (map->ConnectionManager
+    {:conf conf
+     :connections (atom {})
+     :connection-factory connection-factory
+     :out-ch (l/channel)
+     :close-ch (l/channel)}))
 
 (defn- add-source-id [id message]
   {:id id :message message})
@@ -8,31 +19,57 @@
 (defn- connection-closed? [message]
   (= :closed (:message message)))
 
-(defn- irc-connection [out-ch id nick realname conf]
-  (let [[_ ch] (irc/connect-to-irc
-                 :host (:host conf) :port (:port conf)
-                 :nick nick :realname realname
-                 :channels (:channels conf))
-        messages (map* (partial add-source-id id) ch)]
-    (siphon messages out-ch)))
+(defn- start-connection!
+  [manager id & {:keys [conf]}]
+  (let [factory (:connection-factory manager)
+        manager-conf (:conf manager)
+        connection-conf (or conf (get-in manager-conf [:servers id]))
+        [conn-in conn-out] (factory manager-conf connection-conf)
+        messages (l/map* (partial add-source-id id) conn-out)]
+    (l/siphon messages (:out-ch manager))
+    (l/siphon (l/filter* connection-closed? messages)
+              (:close-ch manager))
+    (swap! (:connections manager)
+           #(assoc % id conn-in))))
 
-(defn- later [f d]
-  (future
-    (Thread/sleep d)
-    (f)))
+(defn- get-connection [manager id]
+  (-> (:connections manager)
+      deref
+      (get id)))
 
-(defn start-manager
-  [conf]
-  (let [out-ch (channel)
-        nick (:nick conf)
-        realname (:realname conf)
-        timeout (or (:timeout conf) 10000)
-        server-conf #(get-in conf [:servers %])
-        connection-for-id (fn [id]
-                            (irc-connection out-ch id nick realname
-                                            (server-conf id)))]
-    (doseq [[id server] (:servers conf)]
-      (irc-connection out-ch id nick realname server))
-    (receive-all (filter* connection-closed? out-ch)
-                 (fn [m] (later #(connection-for-id (:id m)) timeout)))
-    out-ch))
+(defn- start-all-connections! [manager]
+  (doseq [[id conf] (get-in manager [:conf :servers])]
+    (start-connection! manager id :conf conf)))
+
+(defn- close-connection! [manager id]
+  (let [connections (:connections manager)
+        connection (@connections id)]
+    (l/close connection)
+    (swap! connections #(dissoc % id))))
+
+(defn close! [manager]
+  (let [out-ch (:out-ch manager)
+        connections (:connections manager)]
+    (l/close (:close-ch manager))
+    (doseq [[id _] @connections]
+      (close-connection! manager id))
+    (l/enqueue out-ch :manager-closed)
+    (l/close out-ch)))
+
+(defn- delayed-restart! [manager msg]
+  (let [timeout (or (:timeout manager) 10000)]
+    (util/later
+      (fn []
+        (start-connection! manager (:id msg)))
+      timeout)))
+
+(defn send!
+  ([manager id message]
+   (l/enqueue (get-connection manager id) message))
+  ([manager message]
+   (send! manager (:id message) (:message message))))
+
+(defn start! [manager]
+  (do (l/receive-all (:close-ch manager)
+                     (partial delayed-restart! manager))
+      (start-all-connections! manager)))
