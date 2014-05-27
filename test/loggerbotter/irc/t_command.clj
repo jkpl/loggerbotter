@@ -19,7 +19,7 @@
        (irc/pong "server") => "PONG :server"
        (irc/ping? {:command "PING" :body "server"}) => true
        (irc/ping->pong {:command "PING" :body "server"})
-           => "PONG :server")
+         => "PONG :server")
 
 (facts "IRC quit"
        (irc/quit "msg") => "QUIT :msg")
@@ -34,14 +34,14 @@
 
 (facts "IRC message parser"
        (irc/parse ":server.com 001 param1 param2 :message :body")
-           => {:name "server.com" :command "001"
-              :parameters ["param1" "param2"]
-              :body "message :body"}
+         => {:name "server.com" :command "001"
+            :parameters ["param1" "param2"]
+            :body "message :body"}
        (irc/parse "command :body")
-           => {:command "command" :body "body" :parameters []}
+         => {:command "command" :body "body" :parameters []}
        (irc/parse ":foo!bar@server param :body")
-           => {:name {:nick "foo" :username "bar" :host "server"}
-               :command "param" :body "body" :parameters []}
+         => {:name {:nick "foo" :username "bar" :host "server"}
+             :command "param" :body "body" :parameters []}
        (irc/parse "cmd param1 param2 :body")
-           => {:command "cmd" :body "body"
-               :parameters ["param1" "param2"]})
+         => {:command "cmd" :body "body"
+             :parameters ["param1" "param2"]})
