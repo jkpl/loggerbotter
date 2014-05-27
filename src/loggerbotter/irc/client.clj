@@ -20,7 +20,7 @@
       (enqueue in-ch (irc/join channel)))
     (receive-all (filter* irc/ping? out-ch)
                  #(enqueue in-ch (irc/ping->pong %)))
-    [in-ch out-ch]))
+    (splice out-ch in-ch)))
 
 (defn irc-client!
   [& {:keys [host port nick realname channels]}]

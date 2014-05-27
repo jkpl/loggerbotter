@@ -1,6 +1,7 @@
 (ns loggerbotter.connectionmanager
   (:require [lamina.core :as l]
-            [loggerbotter.util :as util]))
+            [loggerbotter.util :as util]
+            [clj-time.core :as time]))
 
 (defrecord ConnectionManager
            [conf connections connection-factory out-ch close-ch])
@@ -13,8 +14,8 @@
      :out-ch (l/channel)
      :close-ch (l/channel)}))
 
-(defn- add-source-id [id message]
-  {:id id :message message})
+(defn- add-id-and-time [id message]
+  {:id id :message message :time (time/now)})
 
 (defn- connection-closed? [message]
   (= :closed (:message message)))
@@ -24,13 +25,13 @@
   (let [factory (:connection-factory manager)
         manager-conf (:conf manager)
         connection-conf (or conf (get-in manager-conf [:servers id]))
-        [conn-in conn-out] (factory manager-conf connection-conf)
-        messages (l/map* (partial add-source-id id) conn-out)]
+        conn (factory manager-conf connection-conf)
+        messages (l/map* (partial add-id-and-time id) conn)]
     (l/siphon messages (:out-ch manager))
     (l/siphon (l/filter* connection-closed? messages)
               (:close-ch manager))
     (swap! (:connections manager)
-           #(assoc % id conn-in))))
+           #(assoc % id conn))))
 
 (defn- get-connection [manager id]
   (-> (:connections manager)
