@@ -66,8 +66,5 @@
         :name (parse-name (.substring part1 1)))
       (parse-command message))))
 
-(defn ping? [message]
-  (= "PING" (:command message)))
-
 (defn ping->pong [message]
   (pong (:body message)))

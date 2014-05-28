@@ -17,7 +17,6 @@
 
 (facts "IRC pong"
        (irc/pong "server") => "PONG :server"
-       (irc/ping? {:command "PING" :body "server"}) => true
        (irc/ping->pong {:command "PING" :body "server"})
          => "PONG :server")
 

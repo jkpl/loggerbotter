@@ -21,18 +21,20 @@
 
 (facts
   "Meter"
-  (let [meter1 (m/->Meter :m1 number? +)
-        meter2 (m/->Meter :m2 (every-pred number? pos?) -)]
+  (let [meter1 (m/->Meter :m1 number? + 0)
+        meter2 (m/->Meter :m2 (every-pred number? pos?) - 20)]
     (fact "Meter mapping"
-          (values (m/map-meter meter1 (l/channel 3 "foo" 2 1)))
-            => '(5 6)
+          (values (m/map-meter meter1 (l/channel "x" 3 "foo" 2 1)))
+            => '(3 5 6)
           (values (m/map-meter meter2 (l/channel 10 -3 3 -1 4)))
-            => '(7 3))
+            => '(10 7 3))
     (fact "Meter joining"
           (->> (l/channel 10 "foo" -4 1)
                (m/join-meters [meter1 meter2])
                values
                (group-by :id))
-            => {:m1 [{:id :m1 :value 6}
+            => {:m1 [{:id :m1 :value 10}
+                     {:id :m1 :value 6}
                      {:id :m1 :value 7}]
-                :m2 [{:id :m2 :value 9}]})))
+                :m2 [{:id :m2 :value 10}
+                     {:id :m2 :value 9}]})))

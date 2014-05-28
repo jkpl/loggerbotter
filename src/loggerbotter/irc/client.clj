@@ -2,7 +2,8 @@
   (:require [lamina.core :refer :all]
             [aleph.tcp :refer [tcp-client]]
             [gloss.core :refer [string]]
-            [loggerbotter.irc.command :as irc]))
+            [loggerbotter.irc [command :as irc]
+             [predicate :refer [ping?]]]))
 
 (defn- tcp-line-client [host port]
   (wait-for-result
@@ -18,7 +19,7 @@
     (enqueue in-ch (irc/nick nick))
     (doseq [channel channels]
       (enqueue in-ch (irc/join channel)))
-    (receive-all (filter* irc/ping? out-ch)
+    (receive-all (filter* ping? out-ch)
                  #(enqueue in-ch (irc/ping->pong %)))
     (splice out-ch in-ch)))
 

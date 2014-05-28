@@ -1,7 +1,7 @@
 (ns loggerbotter.meter
   (:require [lamina.core :as l]))
 
-(defrecord Meter [id predicate mapper])
+(defrecord Meter [id predicate mapper start-value])
 
 (defn- wrap-value-with-meter-id [meter v]
   {:id (:id meter) :value v})
@@ -23,7 +23,7 @@
 (defn map-meter [meter in-ch]
   (->> in-ch
        (l/filter* (:predicate meter))
-       (foldp (:mapper meter))))
+       (foldp (:mapper meter) (:start-value meter))))
 
 (defn- map-meter-with-id [meter in-ch]
   (l/map* (partial wrap-value-with-meter-id meter)
