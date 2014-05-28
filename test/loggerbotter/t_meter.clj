@@ -1,4 +1,4 @@
-(ns loggerbotter.irc.t-meter
+(ns loggerbotter.t-meter
   (:require [loggerbotter.meter :as m]
             [lamina.core :as l]
             [midje.sweet :refer :all]))
@@ -32,7 +32,7 @@
           (->> (l/channel 10 "foo" -4 1)
                (m/join-meters [meter1 meter2])
                values
-               (group-by :namespace))
-            => {:m1 [{:namespace :m1 :value 6}
-                     {:namespace :m1 :value 7}]
-                :m2 [{:namespace :m2 :value 9}]})))
+               (group-by :id))
+            => {:m1 [{:id :m1 :value 6}
+                     {:id :m1 :value 7}]
+                :m2 [{:id :m2 :value 9}]})))

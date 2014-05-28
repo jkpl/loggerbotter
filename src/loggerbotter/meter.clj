@@ -1,11 +1,10 @@
 (ns loggerbotter.meter
   (:require [lamina.core :as l]))
 
-(defrecord Meter [namespace predicate mapper])
+(defrecord Meter [id predicate mapper])
 
-(defn- namespaced-value [meter v]
-  {:namespace (:namespace meter)
-   :value v})
+(defn- wrap-value-with-meter-id [meter v]
+  {:id (:id meter) :value v})
 
 (defn- foldp-step [f last-val x]
   (let [previous @last-val]
@@ -26,11 +25,11 @@
        (l/filter* (:predicate meter))
        (foldp (:mapper meter))))
 
-(defn- map-meter-with-namespace [meter in-ch]
-  (l/map* (partial namespaced-value meter)
+(defn- map-meter-with-id [meter in-ch]
+  (l/map* (partial wrap-value-with-meter-id meter)
           (map-meter meter in-ch)))
 
 (defn join-meters [meters in-ch]
   (->> meters
-       (map #(map-meter-with-namespace % (l/fork in-ch)))
+       (map #(map-meter-with-id % (l/fork in-ch)))
        (apply l/merge-channels)))
