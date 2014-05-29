@@ -1,35 +1,44 @@
 (ns loggerbotter.meter
-  (:require [lamina.core :as l]))
+  (:require [lamina.core :as l]
+            [loggerbotter.util :refer [foldp]]))
 
-(defrecord Meter [id predicate reducer start-value])
+(defprotocol Meter
+  (meter-id [meter] "Id of the meter")
+  (predicate [meter] "Predicate function for meter")
+  (channel-mapper
+    [meter ch]
+    "Produces a channel that maps over the given channels values"))
+
+(defrecord ReduceMeter [id predicate reducer start-value]
+  Meter
+  (meter-id [meter] (:id meter))
+  (predicate [meter] (:predicate meter))
+  (channel-mapper [meter ch]
+    (foldp (:reducer meter) (:start-value meter) ch)))
+
+(defrecord MappingMeter [id predicate mapper]
+  Meter
+  (meter-id [meter] (:id meter))
+  (predicate [meter] (:predicate meter))
+  (channel-mapper [meter ch]
+    (l/map* (:mapper meter) ch)))
 
 (defn- wrap-value-with-meter-id [meter v]
-  {:id (:id meter) :value v})
+  {:id (meter-id meter) :value v})
 
-(defn- foldp-step [f last-val x]
-  (let [previous @last-val]
-    (if (= previous :foldp-default-value)
-      (do (reset! last-val x) :foldp-default-value)
-      (swap! last-val #(f % x)))))
+(defn meter-filter [meter ch]
+  (l/filter* (predicate meter) ch))
 
-(defn foldp
-  ([f v channel]
-   (->> channel
-        (l/map* (partial foldp-step f (atom v)))
-        (l/filter* (partial not= :foldp-default-value))))
-  ([f channel]
-   (foldp f :foldp-default-value channel)))
+(defn meter-channel [meter ch]
+  (->> ch
+       (meter-filter meter)
+       (channel-mapper meter)))
 
-(defn map-meter [meter in-ch]
-  (->> in-ch
-       (l/filter* (:predicate meter))
-       (foldp (:reducer meter) (:start-value meter))))
-
-(defn- map-meter-with-id [meter in-ch]
+(defn- meter-channel-with-id [meter ch]
   (l/map* (partial wrap-value-with-meter-id meter)
-          (map-meter meter in-ch)))
+          (meter-channel meter ch)))
 
-(defn join-meters [meters in-ch]
+(defn join-meters [meters ch]
   (->> meters
-       (map #(map-meter-with-id % (l/fork in-ch)))
+       (map #(meter-channel-with-id % (l/fork ch)))
        (apply l/merge-channels)))

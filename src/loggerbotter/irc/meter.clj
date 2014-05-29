@@ -1,10 +1,9 @@
 (ns loggerbotter.irc.meter
   (:require [loggerbotter.irc [predicate :refer :all]]
-            [loggerbotter.meter :refer [map->Meter]]
+            [loggerbotter
+             [meter :refer [map->ReduceMeter]]
+             [util :refer [in?]]]
             [clojure.string :as string]))
-
-(defn- in? [x seq]
-  (some (partial = x) seq))
 
 (defn- map-message [f previous message]
   (f previous (:message message)))
@@ -36,7 +35,7 @@
             (remove (set nicks) previous-nicks)))))
 
 (defn channel-nicks-meter [server channel]
-  (map->Meter
+  (map->ReduceMeter
     {:id          (str server "/" channel)
      :start-value []
      :predicate   (partial match-for-server server
