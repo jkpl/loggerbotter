@@ -36,3 +36,18 @@
       (r #{"henrik"} (message "" "KICK" ["#chan" "henrik"])) => #{}
       (r #{"kirk"} (message "" "353" [] "" "kirk spock bones chekov"))
         => (just "kirk" "spock" "bones" "chekov"))))
+
+(facts
+  "Contains text meter"
+  (let [meter (m/contains-text-meter "foobar")
+        p (:predicate meter)
+        f (:mapper meter)]
+    (fact
+      "Predicate matches only private messages containing text"
+      (p (message "" "JOIN" [] "" "foobar")) => false
+      (p (message "" "PRIVMSG" [] "" "barfoo")) => false
+      (p (message "" "PRIVMSG" [] "" "xxxfoobaryyy")) => true)
+    (fact
+      "Mapper extracts chat message"
+      (f (message "" "" ["#chan"] "hans" "the message"))
+        => {:sender {:nick "hans"} :target "#chan" :text "the message"})))

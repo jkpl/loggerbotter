@@ -11,3 +11,5 @@
 (defn kick? [message] (= "KICK" (:command message)))
 
 (defn names-reply? [message] (= "353" (:command message)))
+
+(defn chat-message? [message] (= "PRIVMSG" (:command message)))

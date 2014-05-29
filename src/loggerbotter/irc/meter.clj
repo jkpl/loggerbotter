@@ -1,12 +1,15 @@
 (ns loggerbotter.irc.meter
   (:require [loggerbotter.irc [predicate :refer :all]]
             [loggerbotter
-             [meter :refer [map->ReduceMeter]]
+             [meter :refer [map->ReduceMeter map->MappingMeter]]
              [util :refer [in?]]]
             [clojure.string :as string]))
 
-(defn- map-message [f previous message]
+(defn- reduce-for-message [f previous message]
   (f previous (:message message)))
+
+(defn- map-for-message [f message]
+  (f (:message message)))
 
 (defn- match-for-server [server predicate message]
   (and (= server (:id message))
@@ -36,8 +39,23 @@
 
 (defn channel-nicks-meter [server channel]
   (map->ReduceMeter
-    {:id          (str server "/" channel)
+    {:id          (str "channel-nicks/" server "/" channel)
      :start-value []
      :predicate   (partial match-for-server server
                            (partial channel-nicks-change? channel))
-     :reducer     (partial map-message collect-nicks)}))
+     :reducer     (partial reduce-for-message collect-nicks)}))
+
+(defn- chat-message-contains-text? [text message]
+  (and (chat-message? message)
+       (.contains (:body message) text)))
+
+(defn- extract-chat-message [message]
+  {:sender (:name message)
+   :text   (:body message)
+   :target (first (:parameters message))})
+
+(defn contains-text-meter [text]
+  (map->MappingMeter
+    {:id        (str "contains-text/" text)
+     :predicate #(chat-message-contains-text? text (:message %))
+     :mapper    (partial map-for-message extract-chat-message)}))
