@@ -34,8 +34,8 @@
 (facts "IRC message parser"
        (irc/parse ":server.com 001 param1 param2 :message :body")
          => {:name "server.com" :command "001"
-            :parameters ["param1" "param2"]
-            :body "message :body"}
+             :parameters ["param1" "param2"]
+             :body "message :body"}
        (irc/parse "command :body")
          => {:command "command" :body "body" :parameters []}
        (irc/parse ":foo!bar@server param :body")
