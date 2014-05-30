@@ -3,11 +3,12 @@
             [loggerbotter.irc.meter :as m]))
 
 (defn- message [& [id command parameters nick body]]
-  {:id id
-   :message {:command command
+  {:connection-id id
+   :content {:command command
              :parameters parameters
              :name {:nick nick}
-             :body body}})
+             :body body}
+   :time :today})
 
 (facts
   "Channel nick meter"
@@ -49,5 +50,5 @@
       (p (message "" "PRIVMSG" [] "" "xxxfoobaryyy")) => true)
     (fact
       "Mapper extracts chat message"
-      (f (message "" "" ["#chan"] "hans" "the message"))
+      (f (message "server" "" ["#chan"] "hans" "the message"))
         => {:sender {:nick "hans"} :target "#chan" :text "the message"})))

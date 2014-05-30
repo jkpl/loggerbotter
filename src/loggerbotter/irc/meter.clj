@@ -6,14 +6,11 @@
             [clojure.string :as string]))
 
 (defn- reduce-for-message [f previous message]
-  (f previous (:message message)))
-
-(defn- map-for-message [f message]
-  (f (:message message)))
+  (f previous (:content message)))
 
 (defn- match-for-server [server predicate message]
-  (and (= server (:id message))
-       (predicate (:message message))))
+  (and (= server (:connection-id message))
+       (predicate (:content message))))
 
 (defn- channel-nicks-change? [channel message]
   (or (and (in? (:command message) ["JOIN" "PART" "KICK"])
@@ -39,7 +36,7 @@
 
 (defn channel-nicks-meter [server channel]
   (map->ReduceMeter
-    {:id          (str "channel-nicks/" server "/" channel)
+    {:meter-id    (str "channel-nicks/" server "/" channel)
      :start-value []
      :predicate   (partial match-for-server server
                            (partial channel-nicks-change? channel))
@@ -56,6 +53,6 @@
 
 (defn contains-text-meter [text]
   (map->MappingMeter
-    {:id        (str "contains-text/" text)
-     :predicate #(chat-message-contains-text? text (:message %))
-     :mapper    (partial map-for-message extract-chat-message)}))
+    {:meter-id  (str "contains-text/" text)
+     :predicate #(chat-message-contains-text? text (:content %))
+     :mapper    #(extract-chat-message (:content %))}))

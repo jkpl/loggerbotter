@@ -25,3 +25,6 @@
         (l/filter* (partial not= :foldp-default-value))))
   ([f channel]
    (foldp f :foldp-default-value channel)))
+
+(defn lift [f & chs]
+  (l/map* (partial apply f) (l/zip chs)))

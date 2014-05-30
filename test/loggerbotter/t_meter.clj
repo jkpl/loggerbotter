@@ -5,25 +5,55 @@
 
 (def values (partial l/channel->seq))
 
-(let [meter1 (m/->ReduceMeter :m1 number? + 0)
-      meter2 (m/->ReduceMeter :m2 (every-pred number? pos?) - 20)
-      meter3 (m/->MappingMeter :m3 string? #(str % "!"))]
-  (fact "Meter channel"
-        (values (m/meter-channel meter1 (l/channel "x" 3 "foo" 2 1)))
-          => '(3 5 6)
-        (values (m/meter-channel meter2 (l/channel 10 -3 3 -1 4)))
-          => '(10 7 3)
-        (values (m/meter-channel meter3 (l/channel 3 4 "foo" 2 "bar")))
-          => '("foo!" "bar!"))
-  (fact "Meter joining"
-        (->> (l/channel 10 "foo" -4 1 "zap")
-             (m/join-meters [meter1 meter2 meter3])
-             values
-             (group-by :id))
-          => {:m1 [{:id :m1 :value 10}
-                   {:id :m1 :value 6}
-                   {:id :m1 :value 7}]
-              :m2 [{:id :m2 :value 10}
-                   {:id :m2 :value 9}]
-              :m3 [{:id :m3 :value "foo!"}
-                   {:id :m3 :value "zap!"}]}))
+(defn messages [& vs]
+  (apply l/channel
+         (map-indexed (fn [i v] {:time i :content v})
+                      vs)))
+
+(def meter1
+  (m/map->ReduceMeter
+    {:meter-id    :m1
+     :predicate   #(number? (:content %))
+     :reducer     #(+ %1 (:content %2))
+     :start-value 1}))
+
+(def meter2
+  (m/map->ReduceMeter
+    {:meter-id    :m2
+     :predicate   #((every-pred number? pos?) (:content %))
+     :reducer     #(- %1 (:content %2))
+     :start-value 20}))
+
+(def meter3
+  (m/map->MappingMeter
+    {:meter-id  :m3
+     :predicate #(string? (:content %))
+     :mapper    #(str (:content %) "!")}))
+
+(fact
+  "Meter channel"
+  (values (m/meter-channel meter1 (messages "x" 3 "foo" 2 1)))
+    => '({:meter-id :m1 :value 4 :time 1}
+         {:meter-id :m1 :value 6 :time 3}
+         {:meter-id :m1 :value 7 :time 4})
+  (values (m/meter-channel meter2 (messages 10 -3 3 -1 4)))
+    => '({:meter-id :m2 :value 10 :time 0}
+         {:meter-id :m2 :value 7 :time 2}
+         {:meter-id :m2 :value 3 :time 4})
+  (values (m/meter-channel meter3 (messages "foo" 4 2 "bar" 1)))
+    => '({:meter-id :m3 :value "foo!" :time 0}
+         {:meter-id :m3 :value "bar!" :time 3}))
+
+(fact
+  "Meter joining"
+  (->> (messages 10 "foo" -4 1 "zap")
+       (m/join-meters [meter1 meter2 meter3])
+       values
+       (group-by :meter-id))
+    => {:m1 [{:meter-id :m1 :value 11 :time 0}
+             {:meter-id :m1 :value 7 :time 2}
+             {:meter-id :m1 :value 8 :time 3}]
+        :m2 [{:meter-id :m2 :value 10 :time 0}
+             {:meter-id :m2 :value 9 :time 3}]
+        :m3 [{:meter-id :m3 :value "foo!" :time 1}
+             {:meter-id :m3 :value "zap!" :time 4}]})

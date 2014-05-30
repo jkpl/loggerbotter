@@ -14,33 +14,35 @@
      :out-ch (l/channel)
      :close-ch (l/channel)}))
 
-(defn- add-id-and-time [id message]
-  {:id id :message message :time (time/now)})
+(defn- add-id-and-time [connection-id message]
+  {:connection-id connection-id
+   :content message
+   :time (time/now)})
 
 (defn- connection-closed? [message]
   (= :closed (:message message)))
 
 (defn- start-connection!
-  [manager id & {:keys [conf]}]
+  [manager connection-id & {:keys [conf]}]
   (let [factory (:connection-factory manager)
         manager-conf (:conf manager)
-        connection-conf (or conf (get-in manager-conf [:servers id]))
+        connection-conf (or conf (get-in manager-conf [:servers connection-id]))
         conn (factory manager-conf connection-conf)
-        messages (l/map* (partial add-id-and-time id) conn)]
+        messages (l/map* (partial add-id-and-time connection-id) conn)]
     (l/siphon messages (:out-ch manager))
     (l/siphon (l/filter* connection-closed? messages)
               (:close-ch manager))
     (swap! (:connections manager)
-           #(assoc % id conn))))
+           #(assoc % connection-id conn))))
 
-(defn- get-connection [manager id]
+(defn- get-connection [manager connection-id]
   (-> (:connections manager)
       deref
-      (get id)))
+      (get connection-id)))
 
 (defn- start-all-connections! [manager]
-  (doseq [[id conf] (get-in manager [:conf :servers])]
-    (start-connection! manager id :conf conf)))
+  (doseq [[connection-id conf] (get-in manager [:conf :servers])]
+    (start-connection! manager connection-id :conf conf)))
 
 (defn- close-connection! [manager id]
   (let [connections (:connections manager)
@@ -65,10 +67,10 @@
       timeout)))
 
 (defn send!
-  ([manager id message]
-   (l/enqueue (get-connection manager id) message))
+  ([manager connection-id message]
+   (l/enqueue (get-connection manager connection-id) message))
   ([manager message]
-   (send! manager (:id message) (:message message))))
+   (send! manager (:connection-id message) (:message message))))
 
 (defn start! [manager]
   (do (l/receive-all (:close-ch manager)
