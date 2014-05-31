@@ -75,4 +75,5 @@
 (defn start! [manager]
   (do (l/receive-all (:close-ch manager)
                      (partial delayed-restart! manager))
-      (start-all-connections! manager)))
+      (start-all-connections! manager)
+      manager))

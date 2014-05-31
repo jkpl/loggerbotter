@@ -51,4 +51,5 @@
     (fact
       "Mapper extracts chat message"
       (f (message "server" "" ["#chan"] "hans" "the message"))
-        => {:sender {:nick "hans"} :target "#chan" :text "the message"})))
+        => {:sender {:nick "hans"} :server "server"
+            :target "#chan" :text "the message"})))

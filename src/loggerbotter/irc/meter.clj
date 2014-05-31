@@ -36,7 +36,7 @@
 
 (defn channel-nicks-meter [server-id channel]
   (map->ReduceMeter
-    {:meter-id    (str "channel-nicks/" server-id "/" channel)
+    {:meter-id    (str "channel-nicks/" (name server-id) "/" channel)
      :start-value []
      :predicate   (partial match-for-server server-id
                            (partial channel-nicks-change? channel))
@@ -47,15 +47,17 @@
        (.contains (:body message) text)))
 
 (defn- extract-chat-message [message]
-  {:sender (:name message)
-   :text   (:body message)
-   :target (first (:parameters message))})
+  (let [content (:content message)]
+    {:sender (:name content)
+     :text   (:body content)
+     :server (:connection-id message)
+     :target (first (:parameters content))}))
 
 (defn contains-text-meter [text]
   (map->MappingMeter
     {:meter-id  (str "contains-text/" text)
      :predicate #(chat-message-contains-text? text (:content %))
-     :mapper    #(extract-chat-message (:content %))}))
+     :mapper    extract-chat-message}))
 
 (defn- contains-text-meters-from-configuration [conf]
   (map contains-text-meter (:follow-tags conf)))
