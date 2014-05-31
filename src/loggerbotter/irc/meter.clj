@@ -22,7 +22,7 @@
 (defn- nicks-from-message [message]
   (cond
     ((some-fn join? quit? part?) message) (-> message :name :nick vector)
-    (kick? message) (-> (:parameters message) second vector)
+    (kick? message) (-> message :parameters second vector)
     (names-reply? message) (string/split (:body message) #" ")
     :else []))
 
@@ -34,11 +34,11 @@
             (concat previous-nicks nicks)
             (remove (set nicks) previous-nicks)))))
 
-(defn channel-nicks-meter [server channel]
+(defn channel-nicks-meter [server-id channel]
   (map->ReduceMeter
-    {:meter-id    (str "channel-nicks/" server "/" channel)
+    {:meter-id    (str "channel-nicks/" server-id "/" channel)
      :start-value []
-     :predicate   (partial match-for-server server
+     :predicate   (partial match-for-server server-id
                            (partial channel-nicks-change? channel))
      :reducer     (partial reduce-for-message collect-nicks)}))
 
@@ -56,3 +56,16 @@
     {:meter-id  (str "contains-text/" text)
      :predicate #(chat-message-contains-text? text (:content %))
      :mapper    #(extract-chat-message (:content %))}))
+
+(defn- contains-text-meters-from-configuration [conf]
+  (map contains-text-meter (:follow-tags conf)))
+
+(defn- channel-nicks-meters-from-configuration [conf]
+  (mapcat (fn [[server-id server]]
+            (map (partial channel-nicks-meter server-id)
+                 (:channels server)))
+          (:servers conf)))
+
+(defn meters-from-configuration [conf]
+  (concat (contains-text-meters-from-configuration conf)
+          (channel-nicks-meters-from-configuration conf)))
