@@ -1,7 +1,8 @@
 (ns loggerbotter.database
   (:require [clj-time [core :as time] [coerce :as time-coerce]]
             [cheshire [generate :refer [add-encoder]]]
-            [com.ashafa.clutch :as clutch]))
+            [com.ashafa.clutch :as clutch])
+  (:gen-class))
 
 (defprotocol Database
   (save-raw-data! [db data] "Save unprocessed data to database")

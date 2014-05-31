@@ -1,0 +1,13 @@
+{
+    "nick": "loggerbotter",
+    "realname": "Logger Botter",
+    "couchdburl": "loggerbotter",
+    "follow-tags": ["#loggerbotter"],
+    "servers": {
+        "freenode": {
+            "host": "irc.freenode.org",
+            "port": 6667,
+            "channels": ["#loggerbotter"]
+        }
+    }
+}
