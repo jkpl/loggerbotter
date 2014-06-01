@@ -25,10 +25,7 @@
       (json/parse-string keyword)))
 
 (defn- setup-database [conf]
-  (db/->CachedDatabase
-    (db/initialize-couchdb-db
-      (get conf :couchdburl "loggerbotter"))
-    (db/create-memory-db)))
+  (db/initialize-couchdb-db (get conf :couchdburl "loggerbotter")))
 
 (defn start-loggerbotter! [conf]
   (let [meters (irc/meters-from-configuration conf)

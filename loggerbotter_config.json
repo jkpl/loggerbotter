@@ -2,7 +2,7 @@
     "nick": "loggerbotter",
     "realname": "Logger Botter",
     "couchdburl": "loggerbotter",
-    "follow-tags": ["#loggerbotter"],
+    "follow-tags": ["#loggerbotter", "#clojure"],
     "http": {
         "port": 8080
     },
