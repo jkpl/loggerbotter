@@ -24,46 +24,17 @@ $(function() {
         series: []
     });
 
-    var tagTabs = $('#tag-tabs')
-    var tagArea = $('#tag-area');
-    var tagElements = {};
-
-    function createTagContainer(tagString) {
-        var container = $('<div></div>').addClass('list-group').hide();
-        var tab = $('<li></li>');
-        var link = $('<a href="#"></a>').text(tagString).click(function(e){
-            showTag(tagString);
-        });
-        tab.append(link);
-        tagTabs.append(tab);
-        tagArea.append(container);
-        tagElements[tagString] = {
-            container: container,
-            tab: tab
-        }
-    }
-
-    function showTag(tagString) {
-        $.each(tagElements, function(k, element) {
-            element.container.hide();
-            element.tab.removeClass('active');
-        });
-        var tagElement = tagElements[tagString];
-        tagElement.container.show();
-        tagElement.tab.addClass('active');
-    }
-
-    function addDataToTag(tagString, data) {
-        var heading = $('<h5></h5>')
-            .addClass('list-group-item-heading')
-            .text(data.heading);
-        var body = $('<p></p>')
-            .addClass('list-group-item-text')
-            .text(data.text);
-        var groupItem = $('<div></div>').addClass('list-group-item')
-            .append(heading).append(body);
-        tagElements[tagString].container.prepend(groupItem);
-    }
+    var ViewModel = function() {
+        var self = this;
+        self.followtags = ko.observableArray();
+        self.selectTag = function (tag) {
+            console.log(tag);
+            ko.utils.arrayForEach(self.followtags(), function(tag) { tag.isVisible(false); });
+            tag.isVisible(true);
+        };
+    };
+    var viewModel = new ViewModel()
+    ko.applyBindings(viewModel);
 
     var meterdata = new Rx.Subject();
     var ws = new WebSocket('ws://' + location.host + '/ws');
@@ -101,10 +72,16 @@ $(function() {
 
     tags.subscribe(function(data) {
         var tagText = data['meter-id'].split('/').slice(1).join('');
-        var data = {heading: data.value.sender.nick, text: data.value.text};
-        if (!tagElements[tagText]) {
-            createTagContainer(tagText);
+        var tagData = ko.utils.arrayFirst(viewModel.followtags(), function(t) { return t.tagname === tagText; })
+        var message = {person: data.value.sender.nick, text: data.value.text};
+        if (tagData) {
+            tagData.messages.push(message);
+        } else {
+            viewModel.followtags.push({
+                tagname: tagText,
+                isVisible: ko.observable(false),
+                messages: ko.observableArray([message])
+            });
         }
-        addDataToTag(tagText, data);
     });
 });
