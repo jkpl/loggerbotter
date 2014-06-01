@@ -3,6 +3,9 @@
     "realname": "Logger Botter",
     "couchdburl": "loggerbotter",
     "follow-tags": ["#loggerbotter"],
+    "http": {
+        "port": 8080
+    },
     "servers": {
         "freenode": {
             "host": "irc.freenode.org",

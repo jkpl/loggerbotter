@@ -4,9 +4,12 @@
              [connectionmanager :as cm]
              [util :as u]
              [database :as db]
-             [meter :as meter]]
+             [meter :as meter]
+             [http :as http]]
             [lamina.core :as l]
             [cheshire.core :as json]))
+
+(defonce my-app (atom {}))
 
 (defn irc-connection-factory [conf server]
   (->> server
@@ -32,10 +35,18 @@
         database (setup-database conf)
         manager (irc-connection-manager conf)
         conn-ch (:out-ch manager)
-        meter-ch (meter/join-meters meters conn-ch)]
+        meter-ch (meter/join-meters meters conn-ch)
+        http-server (http/start-server conf database meter-ch)]
     (l/receive-all meter-ch (partial db/save-meter-data! database))
     (l/receive-all conn-ch (partial db/save-raw-data! database))
-    (cm/start! manager)))
+    (cm/start! manager)
+    (reset! my-app {:manager manager :http-server http-server})))
+
+(defn stop-loggerbotter! []
+  (when-let [app @my-app]
+    (http/stop-server (:http-server app))
+    (cm/close! (:manager app))
+    (reset! my-app nil)))
 
 (defn -main [& [conf-file]]
   (start-loggerbotter! (read-conf-file conf-file)))
