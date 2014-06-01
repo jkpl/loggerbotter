@@ -21,8 +21,6 @@ module.exports = function (grunt) {
         dist: 'resources/public'
     };
 
-    grunt.loadNpmTasks('grunt-browserify');
-
     // Define the configuration for all the tasks
     grunt.initConfig({
 
@@ -37,7 +35,7 @@ module.exports = function (grunt) {
             },
             js: {
                 files: ['<%= config.app %>/scripts/{,*/}*.js'],
-                tasks: ['jshint', 'browserify'],
+                tasks: ['jshint'],
                 options: {
                     livereload: true
                 }
@@ -343,8 +341,7 @@ module.exports = function (grunt) {
         concurrent: {
             server: [
                 'sass:server',
-                'copy:styles',
-                'browserify'
+                'copy:styles'
             ],
             test: [
                 'copy:styles'
@@ -353,19 +350,10 @@ module.exports = function (grunt) {
                 'sass',
                 'copy:styles',
                 'imagemin',
-                'svgmin',
-                'browserify'
+                'svgmin'
             ]
         },
-
-        browserify: {
-            basic: {
-                src: ['<%= config.app %>/scripts/**/*.js'],
-                dest: '.tmp/scripts/app.js'
-            }
-        }
     });
-
 
     grunt.registerTask('serve', function (target) {
         if (target === 'dist') {

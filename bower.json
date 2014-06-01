@@ -3,7 +3,9 @@
   "private": true,
   "dependencies": {
     "bootstrap-sass-official": "~3.1.0",
-    "jquery": "~1.11.0"
+    "jquery": "~1.11.0",
+    "highcharts-release": "~4.0.1",
+    "rxjs": "~2.2.24"
   },
   "devDependencies": {}
 }
